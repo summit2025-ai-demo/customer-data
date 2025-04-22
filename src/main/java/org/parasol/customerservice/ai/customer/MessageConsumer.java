@@ -41,20 +41,20 @@ public class MessageConsumer {
                     JsonObject json = new JsonObject(m.value());
                     JsonObject structured = json.getJsonObject("structured");
                     if (structured == null) {
-                        handleError(json, "Structured data missing", null, null);
+                        handleError(m.key(), json, "Structured data missing", null, null);
                         return;
                     }
                     String email = structured.getString("email_address");
                     if (email == null || email.isEmpty()) {
-                        handleError(json, "Email missing", null, null);
+                        handleError(m.key(), json, "Email missing", null, null);
                         return;
                     }
                     CustomerDto customer = customerService.getCustomerByEmail(email);
                     if (customer == null) {
-                        handleError(json, "Customer not found", null, null);
+                        handleError(m.key(), json, "Customer not found", null, null);
                         return;
                     }
-                    processCustomerData(json, customer);
+                    processCustomerData(m.key(), json, customer);
                 })
                 .onItem().transformToUni(m -> Uni.createFrom().voidItem())
                 .onFailure().recoverWithItem(t -> {
@@ -63,15 +63,15 @@ public class MessageConsumer {
                     PrintWriter pw = new PrintWriter(sw);
                     t.printStackTrace(pw);
                     if (t instanceof DecodeException) {
-                        handleError(new JsonObject(), t.getMessage(), sw.toString(), message.value());
+                        handleError(message.key(), new JsonObject(), t.getMessage(), sw.toString(), message.value());
                     } else {
-                        handleError(new JsonObject(message.value()), t.getMessage(), sw.toString(), null);
+                        handleError(message.key(), new JsonObject(message.value()), t.getMessage(), sw.toString(), null);
                     }
                     return null;
                 });
     }
 
-    private void handleError(JsonObject json, String errorMessage, String stacktrace, String message) {
+    private void handleError(String key, JsonObject json, String errorMessage, String stacktrace, String message) {
         LOGGER.error("Error while processing message: {}", errorMessage);
         JsonObject error = new JsonObject();
         error.put("source", "customer-data");
@@ -84,21 +84,21 @@ public class MessageConsumer {
             }
             errors.add(error);
             json.put("errors", errors);
-            errorEventEmitter.emit(json.encode());
+            errorEventEmitter.emit(key, json.encode());
         } else {
             error.put("message", message);
-            errorEventEmitter.emit(error.encode());
+            errorEventEmitter.emit(key, error.encode());
         }
     }
 
-    private void processCustomerData(JsonObject json, CustomerDto customer) {
+    private void processCustomerData(String key, JsonObject json, CustomerDto customer) {
         JsonObject structured = json.getJsonObject("structured");
-        structured.put("company_id", customer.getId());
+        structured.put("customer_id", customer.getId());
         structured.put("company_name", customer.getCompany());
         structured.put("country", customer.getCountry());
         structured.put("phone", customer.getPhone());
         json.put("structured", structured);
         LOGGER.info("Structured Information: {}", structured.encode());
-        structuredMessageEmitter.emit(json.encode());
+        structuredMessageEmitter.emit(key, json.encode());
     }
 }
