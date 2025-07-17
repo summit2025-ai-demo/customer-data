@@ -8,10 +8,10 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Message;
 
 @ApplicationScoped
-public class StructuredMessageEmitter {
+public class CustomerDataEmitter {
 
     @Inject
-    @Channel("structured-message")
+    @Channel("customer-data")
     Emitter<String> emitter;
 
     public void emit(String key, String payload) {

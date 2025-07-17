@@ -27,7 +27,7 @@ public class MessageConsumer {
     ErrorEventEmitter errorEventEmitter;
 
     @Inject
-    StructuredMessageEmitter structuredMessageEmitter;
+    CustomerDataEmitter customerDataEmitter;
 
     @Inject
     CustomerService customerService;
@@ -99,6 +99,6 @@ public class MessageConsumer {
         structured.put("phone", customer.getPhone());
         json.put("structured", structured);
         LOGGER.info("Structured Information: {}", structured.encode());
-        structuredMessageEmitter.emit(key, json.encode());
+        customerDataEmitter.emit(key, json.encode());
     }
 }
